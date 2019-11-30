@@ -32,21 +32,21 @@ static ProductoButton buttons[PRODUCTO_BTNS] = {
    .str = "LIST",
    .id = 0x69,
    .pin = PRODUCTO_BTN_START,
-   .timer = 0,   
+   .timer = 0,
   },
   {
    .btn = Button2(PRODUCTO_BTN_STOP),
    .str = "PAUSE/RESUME",
    .id = 0x70,
    .pin = PRODUCTO_BTN_STOP,
-   .timer = 0,   
+   .timer = 0,
   },
   {
    .btn = Button2(PRODUCTO_BTN_TASK_1),
    .str = "Pooping",
    .id = 1,
    .pin = PRODUCTO_BTN_TASK_1,
-   .timer = 0,   
+   .timer = 0,
   },
   {
    .btn = Button2(PRODUCTO_BTN_TASK_2),
@@ -184,7 +184,7 @@ static void tft_init()
   }
 
   tft.setSwapBytes(true);
-  
+
   producto_circle(0);
   // tft.fillScreen(TFT_RED);
 }
@@ -198,14 +198,14 @@ static void tft_clr_wr(String str, int w, int h)
   // for (int i = 0; i < 6; i++) {
   //   // tft.drawCircle(20 + (40 * i), 10, 5, TFT_WHITE);
   //   tft.fillCircle(20 + (40 * i), 10, 2, TFT_WHITE);
-  // }    
+  // }
 }
 
 static void producto_circle(int task_num)
 {
   // tft.drawRect(1, 1, tft.width() - 2, 20, TFT_WHITE);
   tft.fillRect(1, 1, tft.width() - 2, 18, TFT_BLACK);
-  
+
   for (int i = 0; i < 6; i++) {
     // tft.drawCircle(20 + (40 * i), 10, 5, TFT_WHITE);
     tft.fillCircle(20 + (40 * i), 10, 2, TFT_WHITE);
@@ -234,12 +234,12 @@ static void producto_wr_timer(int time)
     byte hr = time / 3600;
     byte min = time / 60;
     byte sec = time % 60;
-    
+
     char time_str[9];
     sprintf(time_str, "%02d:%02d:%02d", hr, min, sec);
     // String time_str = hr + (String)":" + min + (String)":" + sec;
-    
-    tft.setTextSize(5);  
+
+    tft.setTextSize(5);
     // tft.drawRect(1, 72, tft.width() - 2, 41, TFT_WHITE);
     // tft.fillRect(1, 72, tft.width() - 2, 41, TFT_BLACK);
     tft.drawString(time_str, tft.width()/2, 95);
@@ -272,13 +272,13 @@ static void do_timer()
 {
   static int prev_millis = 0;
   int time_elapsed = millis() - prev_millis;
-  
+
   if (active_timer > 0 && time_elapsed > 1000) {
     buttons[active_timer].timer++;
     // TODO: only do this on interrupet
     update_display();
     prev_millis = millis();
-  }  
+  }
 }
 
 
@@ -292,9 +292,9 @@ static void display_start()
 static void display_task()
 {
   ProductoButton *button;
-  
+
   if (active_timer > 0) {
-    button = &buttons[active_timer];    
+    button = &buttons[active_timer];
   } else if (paused_timer > 0) {
     button = &buttons[paused_timer];
   } else {
@@ -330,7 +330,7 @@ static void update_display()
   case START:
     display_start();
     break;
-    
+
   case TASK:
     display_task();
     break;
@@ -370,7 +370,7 @@ static void button_init()
 {
   buttons[0].btn.setTapHandler(toggle_list_tasks);
   buttons[1].btn.setTapHandler(pause_resume_timer);
-  
+
   buttons[2].btn.setTapHandler(test1);
   buttons[3].btn.setTapHandler(test2);
   buttons[4].btn.setTapHandler(test3);
@@ -444,19 +444,19 @@ static void producto_list_tasks()
 {
   ProductoButton *button;
   int y_offset;
-  
+
   tft.fillRect(0, 20, tft.width(), tft.height(), TFT_BLACK);
-  
+
   tft.setRotation(2);
   tft.setTextSize(1);
   tft.setTextDatum(ML_DATUM);
-  
+
   for (int i = 2; i < 8; i++) {
     button = &buttons[i];
     y_offset = 240 - ((40 * button->id) - 20);
     tft.drawString(button->str, 20, y_offset);
   }
-  
+
   tft.setRotation(1);
   tft.setTextDatum(MC_DATUM);
 }
@@ -464,7 +464,7 @@ static void producto_list_tasks()
 static void toggle_list_tasks(Button2&)
 {
   static bool showing_list = false;
-  
+
   if (showing_list == false) {
     display_state = LIST;
     showing_list = true;
