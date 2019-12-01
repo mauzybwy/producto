@@ -22,4 +22,20 @@
 void producto_init();
 void producto_loop();
 
+typedef struct producto_button_s {
+  Button2 btn;
+  String str;
+  byte id;
+  byte pin;
+  unsigned int timer;
+} ProductoButton;
+
+typedef struct producto_s {
+  ProductoButton buttons[PRODUCTO_BTNS];
+  byte num_buttons;
+  byte active_timer;
+  byte paused_timer;
+  TFT_eSPI tft;
+} Producto;
+
 #endif // _PRODUCTO_H_
