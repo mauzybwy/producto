@@ -8,6 +8,7 @@
 #include "Arduino.h"
 #include <Button2.h>
 #include <TFT_eSPI.h>
+#include <RTClib.h>
 
 #define PRODUCTO_BTNS 8
 #define PRODUCTO_BTN_START 35
@@ -18,6 +19,8 @@
 #define PRODUCTO_BTN_TASK_4 2
 #define PRODUCTO_BTN_TASK_5 17
 #define PRODUCTO_BTN_TASK_6 32
+
+#define PRODUCTO_RTC_SQW_PIN 33
 
 void producto_init();
 void producto_loop();
@@ -36,6 +39,7 @@ typedef struct producto_s {
   byte active_timer;
   byte paused_timer;
   TFT_eSPI tft;
+  RTC_DS3231 rtc;
 } Producto;
 
 #endif // _PRODUCTO_H_

@@ -140,8 +140,8 @@ static void producto_circle(int task_num)
 static void producto_wr_timer(int time)
 {
 
-  byte hr = time / 3600;
-  byte min = time / 60;
+  byte hr = time / 3600 % 24;
+  byte min = time / 60 % 60;
   byte sec = time % 60;
 
   char time_str[9];

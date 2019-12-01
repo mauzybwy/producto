@@ -10,6 +10,7 @@
 #include "Arduino.h"
 #include <Button2.h>
 #include <TFT_eSPI.h>
+#include <RTClib.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -76,11 +77,13 @@ static Producto producto = {
   .active_timer = 0,
   .paused_timer = 0,
   .tft = TFT_eSPI(135, 240),
+  .rtc = RTC_DS3231(),
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 
 static void serial_init();
+static void rtc_init();
 static void button_init();
 static void check_buttons();
 static void task_btn(int btn_num);
@@ -114,9 +117,14 @@ static void handle7() { button_isr(7); }
  */
 void producto_init()
 {
+  noInterrupts();
+  
   display_init(&producto);
   serial_init();
   button_init();
+  rtc_init();
+
+  interrupts();
 }
 
 /**
@@ -124,8 +132,7 @@ void producto_init()
  */
 void producto_loop()
 {
-  // check_buttons();
-  do_timer();
+  // do_timer();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -141,6 +148,29 @@ static void serial_init()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+static void rtc_init()
+{
+  /* UH OH */
+  if (! producto.rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1);
+  }
+
+  /* Reset the time if RTC loses power */
+  if (producto.rtc.lostPower()) {
+    Serial.println("RTC lost power, lets set the time!");
+    producto.rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0)); // January 21, 2014 at 3am
+  }
+
+  /* Configure the RTC to run a 1HZ square wave for our clocking */
+  producto.rtc.writeSqwPinMode(DS3231_SquareWave1Hz);
+
+  /* Set up an interrupt on the square wave pin to do the timer thing */
+  pinMode(PRODUCTO_RTC_SQW_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(PRODUCTO_RTC_SQW_PIN), do_timer, RISING);
+}
 
 /**
  * Pause/resume timer
@@ -162,14 +192,9 @@ static void pause_resume_timer(Button2&)
  */
 static void do_timer()
 {
-  static int prev_millis = 0;
-  int time_elapsed = millis() - prev_millis;
-
-  if (producto.active_timer > 0 && time_elapsed > 1000) {
+  if (producto.active_timer > 0) {
     producto.buttons[producto.active_timer].timer++;
-    // TODO: only do this on interrupt
     display_draw();
-    prev_millis = millis();
   }
 }
 
