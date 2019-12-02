@@ -5,6 +5,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "myspiffs.h"
 #include "display.h"
 #include "producto.h"
 #include "Arduino.h"
@@ -119,8 +120,19 @@ void producto_init()
 {
   noInterrupts();
   
-  display_init(&producto);
   serial_init();
+  myspiffs_init();
+
+  myspiffs_append_file("/test_new.txt", "poooooop", true);
+  myspiffs_append_file("/test_new.txt", "asdf", true);
+  myspiffs_read_file("/test_new.txt");
+  myspiffs_list_dir("/", 2);
+  myspiffs_delete_file("/test_new.txt");
+  myspiffs_delete_file("/test.txt");
+  myspiffs_list_dir("/", 2);
+  while(1) {}
+  
+  display_init(&producto);
   button_init();
   rtc_init();
 
