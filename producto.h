@@ -10,15 +10,21 @@
 #include <TFT_eSPI.h>
 #include <RTClib.h>
 
-#define PRODUCTO_BTNS 8
+#define PRODUCTO_TASK_FILE "/producto_tasks.txt"
+#define PRODUCTO_ACTIVE_FILE "/producto_active_task.txt"
+
+#define PRODUCTO_TASKS 6
+#define PRODUCTO_TASK_0_BTN 13
+#define PRODUCTO_TASK_1_BTN 12
+#define PRODUCTO_TASK_2_BTN 15
+#define PRODUCTO_TASK_3_BTN 2
+#define PRODUCTO_TASK_4_BTN 17
+#define PRODUCTO_TASK_5_BTN 32
+#define PRODUCTO_TASK_NONE 0xFF
+
+#define PRODUCTO_BTNS 2
 #define PRODUCTO_BTN_START 35
 #define PRODUCTO_BTN_STOP 0
-#define PRODUCTO_BTN_TASK_1 13
-#define PRODUCTO_BTN_TASK_2 12
-#define PRODUCTO_BTN_TASK_3 15
-#define PRODUCTO_BTN_TASK_4 2
-#define PRODUCTO_BTN_TASK_5 17
-#define PRODUCTO_BTN_TASK_6 32
 
 #define PRODUCTO_RTC_SQW_PIN 33
 
@@ -33,11 +39,15 @@ typedef struct producto_button_s {
   unsigned int timer;
 } ProductoButton;
 
+typedef ProductoButton ProductoTask;
+
 typedef struct producto_s {
+  ProductoButton tasks[PRODUCTO_TASKS];
   ProductoButton buttons[PRODUCTO_BTNS];
+  byte num_tasks;
   byte num_buttons;
-  byte active_timer;
-  byte paused_timer;
+  byte active_task;
+  byte paused_task;
   TFT_eSPI tft;
   RTC_DS3231 rtc;
 } Producto;

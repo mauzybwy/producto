@@ -128,7 +128,7 @@ static void producto_circle(int task_num)
 {
   producto->tft.fillRect(1, 1, producto->tft.width() - 2, 18, TFT_BLACK);
 
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < producto->num_tasks; i++) {
     producto->tft.fillCircle(20 + (40 * i), 10, 2, TFT_WHITE);
   }
 
@@ -157,13 +157,13 @@ static void producto_wr_task(String task_str)
 
 static void producto_list_tasks()
 {
-  ProductoButton *button;
+  ProductoTask *task;
   int y_offset;
 
-  for (int i = 2; i < 8; i++) {
-    button = &producto->buttons[i];
-    y_offset = 240 - ((40 * button->id) - 20);
-    producto->tft.drawString(button->str, 20, y_offset);
+  for (int i = 0; i < producto->num_tasks; i++) {
+    task = &producto->tasks[i];
+    y_offset = 240 - ((40 * task->id) - 20);
+    producto->tft.drawString(task->str, 20, y_offset);
   }
 }
 
@@ -178,19 +178,19 @@ static void display_start()
 
 static void display_task()
 {
-  ProductoButton *button;
+  ProductoTask *task;
   
-  if (producto->active_timer > 0) {
-    button = &producto->buttons[producto->active_timer];
-  } else if (producto->paused_timer > 0) {
-    button = &producto->buttons[producto->paused_timer];
+  if (producto->active_task != PRODUCTO_TASK_NONE) {
+    task = &producto->tasks[producto->active_task];
+  } else if (producto->paused_task != PRODUCTO_TASK_NONE) {
+    task = &producto->tasks[producto->paused_task];
   } else {
-    button = NULL;
+    task = NULL;
   }
 
-  if (button != NULL) {
-    producto_wr_task(button->str);
-    producto_circle(button->id);
+  if (task != NULL) {
+    producto_wr_task(task->str);
+    producto_circle(task->id);
 
     display_transition(TIMER);
   } else {
@@ -205,7 +205,7 @@ static void display_list()
 
 static void display_timer()
 {
-  ProductoButton *button;
-  button = producto->active_timer > 0 ? &producto->buttons[producto->active_timer] : &producto->buttons[producto->paused_timer];
-  producto_wr_timer(button->timer);
+  ProductoTask *task;
+  task = producto->active_task != PRODUCTO_TASK_NONE ? &producto->tasks[producto->active_task] : &producto->tasks[producto->paused_task];
+  producto_wr_timer(task->timer);
 }

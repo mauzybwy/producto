@@ -16,6 +16,51 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 static Producto producto = {
+  .tasks = {
+    {
+     .btn = Button2(PRODUCTO_TASK_0_BTN),
+     .str = "Pooping",
+     .id = 1,
+     .pin = PRODUCTO_TASK_0_BTN,
+     .timer = 0,
+    },
+    {
+     .btn = Button2(PRODUCTO_TASK_1_BTN),
+     .str = "Peeing",
+     .id = 2,
+     .pin = PRODUCTO_TASK_1_BTN,
+     .timer = 0,
+    },
+    {
+     .btn = Button2(PRODUCTO_TASK_2_BTN),
+     .str = "Coffee butt",
+     .id = 3,
+     .pin = PRODUCTO_TASK_2_BTN,
+     .timer = 0,
+    },
+    {
+     .btn = Button2(PRODUCTO_TASK_3_BTN),
+     .str = "Busy",
+     .id = 4,
+     .pin = PRODUCTO_TASK_3_BTN,
+     .timer = 0,
+    },
+    {
+     .btn = Button2(PRODUCTO_TASK_4_BTN),
+     .str = "Getting busy",
+     .id = 5,
+     .pin = PRODUCTO_TASK_4_BTN,
+     .timer = 0,
+    },
+    {
+     .btn = Button2(PRODUCTO_TASK_5_BTN),
+     .str = "Crackin' knuckles",
+     .id = 6,
+     .pin = PRODUCTO_TASK_5_BTN,
+     .timer = 0,
+    },
+  },
+  
   .buttons = {
     {
      .btn = Button2(PRODUCTO_BTN_START),
@@ -31,85 +76,62 @@ static Producto producto = {
      .pin = PRODUCTO_BTN_STOP,
      .timer = 0,
     },
-    {
-     .btn = Button2(PRODUCTO_BTN_TASK_1),
-     .str = "Pooping",
-     .id = 1,
-     .pin = PRODUCTO_BTN_TASK_1,
-     .timer = 0,
-    },
-    {
-     .btn = Button2(PRODUCTO_BTN_TASK_2),
-     .str = "Peeing",
-     .id = 2,
-     .pin = PRODUCTO_BTN_TASK_2,
-     .timer = 0,
-    },
-    {
-     .btn = Button2(PRODUCTO_BTN_TASK_3),
-     .str = "Coffee butt",
-     .id = 3,
-     .pin = PRODUCTO_BTN_TASK_3,
-     .timer = 0,
-    },
-    {
-     .btn = Button2(PRODUCTO_BTN_TASK_4),
-     .str = "Busy",
-     .id = 4,
-     .pin = PRODUCTO_BTN_TASK_4,
-     .timer = 0,
-    },
-    {
-     .btn = Button2(PRODUCTO_BTN_TASK_5),
-     .str = "Getting busy",
-     .id = 5,
-     .pin = PRODUCTO_BTN_TASK_5,
-     .timer = 0,
-    },
-    {
-     .btn = Button2(PRODUCTO_BTN_TASK_6),
-     .str = "Crackin' knuckles",
-     .id = 6,
-     .pin = PRODUCTO_BTN_TASK_6,
-     .timer = 0,
-    },
   },
+
+  .num_tasks = PRODUCTO_TASKS,
   .num_buttons = PRODUCTO_BTNS,
-  .active_timer = 0,
-  .paused_timer = 0,
+  .active_task = PRODUCTO_TASK_NONE,
+  .paused_task = PRODUCTO_TASK_NONE,
   .tft = TFT_eSPI(135, 240),
   .rtc = RTC_DS3231(),
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 
-static void serial_init();
-static void rtc_init();
-static void button_init();
-static void check_buttons();
-static void task_btn(int btn_num);
-static void toggle_list_tasks(Button2&);
-static void button_isr(int i);
-static void pause_resume_timer(Button2&);
-static void do_timer();
+static bool save_active_state_flag = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-static void task_btn1(Button2&) { task_btn(2); }
-static void task_btn2(Button2&) { task_btn(3); }
-static void task_btn3(Button2&) { task_btn(4); }
-static void task_btn4(Button2&) { task_btn(5); }
-static void task_btn5(Button2&) { task_btn(6); }
-static void task_btn6(Button2&) { task_btn(7); }
+#define VERY_BIG 128
+static char very_big_arr[VERY_BIG] = ""; /* Array bigger than largest possible string */
 
-static void handle0() { button_isr(0); }
-static void handle1() { button_isr(1); }
-static void handle2() { button_isr(2); }
-static void handle3() { button_isr(3); }
-static void handle4() { button_isr(4); }
-static void handle5() { button_isr(5); }
-static void handle6() { button_isr(6); }
-static void handle7() { button_isr(7); }
+////////////////////////////////////////////////////////////////////////////////
+
+static void serial_init();
+static void rtc_init();
+static void task_init();
+static void button_init();
+static void task_btn(int task_num);
+static void toggle_list_tasks(Button2&);
+static void task_isr(int i);
+static void button_isr(int i);
+static void pause_resume_timer(Button2&);
+static void do_timer();
+static void save_active_state();
+static void print_active_file_contents();
+static void print_task_file_contents();
+static void delete_task_file();
+static void handle_serial_commands();
+static void append_active_to_tasks_file();
+
+////////////////////////////////////////////////////////////////////////////////
+
+static void task_btn0(Button2&) { task_btn(0); }
+static void task_btn1(Button2&) { task_btn(1); }
+static void task_btn2(Button2&) { task_btn(2); }
+static void task_btn3(Button2&) { task_btn(3); }
+static void task_btn4(Button2&) { task_btn(4); }
+static void task_btn5(Button2&) { task_btn(5); }
+
+static void task_handle0() { task_isr(0); }
+static void task_handle1() { task_isr(1); }
+static void task_handle2() { task_isr(2); }
+static void task_handle3() { task_isr(3); }
+static void task_handle4() { task_isr(4); }
+static void task_handle5() { task_isr(5); }
+
+static void button_handle0() { button_isr(0); }
+static void button_handle1() { button_isr(1); }
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -119,24 +141,17 @@ static void handle7() { button_isr(7); }
 void producto_init()
 {
   noInterrupts();
-  
+
   serial_init();
   myspiffs_init();
-
-  myspiffs_append_file("/test_new.txt", "poooooop", true);
-  myspiffs_append_file("/test_new.txt", "asdf", true);
-  myspiffs_read_file("/test_new.txt");
-  myspiffs_list_dir("/", 2);
-  myspiffs_delete_file("/test_new.txt");
-  myspiffs_delete_file("/test.txt");
-  myspiffs_list_dir("/", 2);
-  while(1) {}
-  
   display_init(&producto);
+  task_init();
   button_init();
   rtc_init();
 
   interrupts();
+
+  append_active_to_tasks_file();
 }
 
 /**
@@ -144,7 +159,11 @@ void producto_init()
  */
 void producto_loop()
 {
-  // do_timer();
+  handle_serial_commands();
+  if (save_active_state_flag) {
+    save_active_state_flag = false;
+    save_active_state();
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -189,13 +208,13 @@ static void rtc_init()
  */
 static void pause_resume_timer(Button2&)
 {
-  if (producto.active_timer == 0) {
-    producto.active_timer = producto.paused_timer;
-    producto.paused_timer = 0;
+  if (producto.active_task == PRODUCTO_TASK_NONE) {
+    producto.active_task = producto.paused_task;
+    producto.paused_task = PRODUCTO_TASK_NONE;
   } else {
     Serial.println("PAUSE TIMER");
-    producto.paused_timer = producto.active_timer;
-    producto.active_timer = 0;
+    producto.paused_task = producto.active_task;
+    producto.active_task = PRODUCTO_TASK_NONE;
   }
 }
 
@@ -204,10 +223,16 @@ static void pause_resume_timer(Button2&)
  */
 static void do_timer()
 {
-  if (producto.active_timer > 0) {
-    producto.buttons[producto.active_timer].timer++;
+  static int total_seconds = 0;
+  
+  if (producto.active_task != PRODUCTO_TASK_NONE) {
+    producto.tasks[producto.active_task].timer++;
     display_draw();
   }
+
+  // if (total_seconds % 60 == 0) {
+    save_active_state_flag = true;
+  // }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -218,6 +243,33 @@ static void button_isr(int i)
   producto.buttons[i].btn.loop();
 }
 
+static void task_isr(int i)
+{
+  producto.tasks[i].btn.loop();
+}
+
+/**
+ * Initialize tasks with callback functions
+ */
+static void task_init()
+{
+  ProductoTask *tasks = producto.tasks;
+  
+  tasks[0].btn.setTapHandler(task_btn0);
+  tasks[1].btn.setTapHandler(task_btn1);
+  tasks[2].btn.setTapHandler(task_btn2);
+  tasks[3].btn.setTapHandler(task_btn3);
+  tasks[4].btn.setTapHandler(task_btn4);
+  tasks[5].btn.setTapHandler(task_btn5);
+  
+  attachInterrupt(tasks[0].pin, task_handle0, CHANGE);
+  attachInterrupt(tasks[1].pin, task_handle1, CHANGE);
+  attachInterrupt(tasks[2].pin, task_handle2, CHANGE);
+  attachInterrupt(tasks[3].pin, task_handle3, CHANGE);
+  attachInterrupt(tasks[4].pin, task_handle4, CHANGE);
+  attachInterrupt(tasks[5].pin, task_handle5, CHANGE);
+}
+
 /**
  * Initialize buttons with callback functions
  */
@@ -226,40 +278,18 @@ static void button_init()
   ProductoButton *buttons = producto.buttons;
   
   buttons[0].btn.setTapHandler(toggle_list_tasks);
-  buttons[1].btn.setTapHandler(pause_resume_timer);
-  buttons[2].btn.setTapHandler(task_btn1);
-  buttons[3].btn.setTapHandler(task_btn2);
-  buttons[4].btn.setTapHandler(task_btn3);
-  buttons[5].btn.setTapHandler(task_btn4);
-  buttons[6].btn.setTapHandler(task_btn5);
-  buttons[7].btn.setTapHandler(task_btn6);
-
-  attachInterrupt(buttons[0].pin, handle0, CHANGE);
-  attachInterrupt(buttons[1].pin, handle1, CHANGE);
-  attachInterrupt(buttons[2].pin, handle2, CHANGE);
-  attachInterrupt(buttons[3].pin, handle3, CHANGE);
-  attachInterrupt(buttons[4].pin, handle4, CHANGE);
-  attachInterrupt(buttons[5].pin, handle5, CHANGE);
-  attachInterrupt(buttons[6].pin, handle6, CHANGE);
-  attachInterrupt(buttons[7].pin, handle7, CHANGE);
+  buttons[1].btn.setTapHandler(pause_resume_timer);  
+  
+  attachInterrupt(buttons[0].pin, button_handle0, CHANGE);
+  attachInterrupt(buttons[1].pin, button_handle1, CHANGE);
 }
 
-/**
- * Handle each Producto button
- */
-static void check_buttons()
+static void task_btn(int task_num)
 {
-  for (int i = 0; i < PRODUCTO_BTNS; i++) {
-    producto.buttons[i].btn.loop();
-  }
-}
+  ProductoButton task = producto.tasks[task_num];
 
-static void task_btn(int btn_num)
-{
-  ProductoButton button = producto.buttons[btn_num];
-
-  producto.active_timer = btn_num;
-  producto.paused_timer = 0;
+  producto.active_task = task_num;
+  producto.paused_task = PRODUCTO_TASK_NONE;
 
   display_transition(TASK);
 }
@@ -274,5 +304,86 @@ static void toggle_list_tasks(Button2&)
   } else {
     display_transition(TASK);
     showing_list = false;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+static void save_active_state()
+{
+  String producto_str = "{ ";
+
+  for (int i = 0; i < producto.num_tasks; i++) {
+    producto_str += "\"";
+    producto_str += producto.tasks[i].str;
+    producto_str += "\"";
+    producto_str += " : ";
+    producto_str += producto.tasks[i].timer;
+    producto_str += ", ";
+  }
+  
+  producto_str += "}";
+
+  producto_str.toCharArray(very_big_arr, VERY_BIG);
+  myspiffs_write_file(PRODUCTO_ACTIVE_FILE, very_big_arr, true);
+}
+
+static void append_active_to_tasks_file()
+{
+  String active_str = myspiffs_read_first_line_of_file(PRODUCTO_ACTIVE_FILE);
+  active_str += "\r\n";
+  
+  active_str.toCharArray(very_big_arr, VERY_BIG);
+  myspiffs_append_file(PRODUCTO_TASK_FILE, very_big_arr);
+}
+
+static void print_active_file_contents()
+{
+  myspiffs_print_file_to_serial(PRODUCTO_ACTIVE_FILE);
+}
+
+static void print_task_file_contents()
+{
+  myspiffs_print_file_to_serial(PRODUCTO_TASK_FILE);
+}
+
+static void delete_task_file()
+{
+  myspiffs_delete_file(PRODUCTO_TASK_FILE);
+}
+
+static String strip(String str)
+{
+  String out_str = str;
+  
+  if (out_str[out_str.length() - 1] == '\n') {
+    out_str = out_str.substring(0,out_str.length()-1);
+  }
+    
+  if (out_str[out_str.length() - 1] == '\r') {
+    out_str = out_str.substring(0,out_str.length()-1);
+  }
+
+  return out_str;
+}
+
+static void handle_serial_commands()
+{
+  String str;
+  if (Serial.available() > 0) {
+    str = Serial.readString();
+    str = strip(str);
+    
+    if (str == "write") {
+      Serial.println("WRITE");
+      save_active_state();
+    } else if (str == "read") {
+      Serial.println("READ");
+      print_active_file_contents();
+      print_task_file_contents();
+    } else if (str == "delete") {
+      Serial.println("DELETE");
+      delete_task_file();
+    }
   }
 }

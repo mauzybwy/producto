@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "SPIFFS.h"
 #include "myspiffs.h"
+#include "logging.h"
 
 void myspiffs_init()
 {
@@ -41,7 +42,7 @@ void myspiffs_list_dir(const char * dirname, uint8_t levels)
   }
 }
 
-void myspiffs_read_file(const char * path)
+void myspiffs_print_file_to_serial(const char * path)
 {
   Serial.printf("Reading file: %s\r\n", path);
 
@@ -57,10 +58,35 @@ void myspiffs_read_file(const char * path)
   }
 }
 
+String myspiffs_read_first_line_of_file(const char * path)
+{
+  Serial.printf("Reading first line of file: %s\r\n", path);
+
+  File file = SPIFFS.open(path);
+  if(!file || file.isDirectory()){
+    Serial.println("- failed to open file for reading");
+    return "";
+  }
+
+  String first_line = "";
+  char c;
+  while(file.available()) {
+    c = (char)file.read();
+    if (c == '\r' || c == '\n') {
+      break;
+    }
+    
+    first_line += c;
+  }
+  Serial.println("- first line:");
+  Serial.println(first_line);
+  return first_line;
+}
+
 void myspiffs_write_file(const char * path, const char * message, bool line)
 {
   Serial.printf("Writing file: %s\r\n", path);
-
+  
   File file = SPIFFS.open(path, FILE_WRITE);
   if(!file){
     Serial.println("- failed to open file for writing");
