@@ -6,37 +6,37 @@
 void myspiffs_init()
 {
   if(!SPIFFS.begin()) {
-    Serial.println("SPIFFS Mount Failed");
+    ERR_PRINTLN("SPIFFS Mount Failed")
   }
 }
 
 void myspiffs_list_dir(const char * dirname, uint8_t levels)
 {
-  Serial.printf("Listing directory: %s\r\n", dirname);
+  DEBUG_PRINTF(("Listing directory: %s\r\n", dirname))
 
   File root = SPIFFS.open(dirname);
   if(!root){
-    Serial.println("- failed to open directory");
+    ERR_PRINTLN("- failed to open directory")
     return;
   }
   if(!root.isDirectory()){
-    Serial.println(" - not a directory");
+    ERR_PRINTLN(" - not a directory")
     return;
   }
 
   File file = root.openNextFile();
   while(file){
     if(file.isDirectory()){
-      Serial.print("  DIR : ");
-      Serial.println(file.name());
+      DEBUG_PRINT("  DIR : ")
+      DEBUG_PRINTLN(file.name())
       if(levels){
 	myspiffs_list_dir(file.name(), levels -1);
       }
     } else {
-      Serial.print("  FILE: ");
-      Serial.print(file.name());
-      Serial.print("\tSIZE: ");
-      Serial.println(file.size());
+      DEBUG_PRINT("  FILE: ")
+      DEBUG_PRINT(file.name())
+      DEBUG_PRINT("\tSIZE: ")
+      DEBUG_PRINTLN(file.size())
     }
     file = root.openNextFile();
   }
@@ -44,15 +44,15 @@ void myspiffs_list_dir(const char * dirname, uint8_t levels)
 
 void myspiffs_print_file_to_serial(const char * path)
 {
-  Serial.printf("Reading file: %s\r\n", path);
+  DEBUG_PRINTF(("Reading file: %s\r\n", path))
 
   File file = SPIFFS.open(path);
   if(!file || file.isDirectory()){
-    Serial.println("- failed to open file for reading");
+    ERR_PRINTLN("- failed to open file for reading")
     return;
   }
 
-  Serial.println("- read from file:");
+  LOG_PRINTLN("- read from file:")
   while(file.available()){
     Serial.write(file.read());
   }
@@ -60,11 +60,11 @@ void myspiffs_print_file_to_serial(const char * path)
 
 String myspiffs_read_first_line_of_file(const char * path)
 {
-  Serial.printf("Reading first line of file: %s\r\n", path);
+  LOG_PRINTF(("Reading first line of file: %s\r\n", path))
 
   File file = SPIFFS.open(path);
   if(!file || file.isDirectory()){
-    Serial.println("- failed to open file for reading");
+    LOG_PRINTLN("- failed to open file for reading")
     return "";
   }
 
@@ -78,77 +78,77 @@ String myspiffs_read_first_line_of_file(const char * path)
     
     first_line += c;
   }
-  Serial.println("- first line:");
-  Serial.println(first_line);
+  LOG_PRINTLN("- first line:")
+  LOG_PRINTLN(first_line)
   return first_line;
 }
 
 void myspiffs_write_file(const char * path, const char * message, bool line)
 {
-  Serial.printf("Writing file: %s\r\n", path);
+  LOG_PRINTF(("Writing file: %s\r\n", path))
   
   File file = SPIFFS.open(path, FILE_WRITE);
   if(!file){
-    Serial.println("- failed to open file for writing");
+    LOG_PRINTLN("- failed to open file for writing")
     return;
   }
 
   if (line) {
     if(file.println(message)){
-      Serial.println("- file written");
+      LOG_PRINTLN("- file written")
     } else {
-      Serial.println("- frite failed");
+      LOG_PRINTLN("- frite failed")
     }
   } else {
     if(file.print(message)){
-      Serial.println("- file written");
+      LOG_PRINTLN("- file written")
     } else {
-      Serial.println("- frite failed");
+      LOG_PRINTLN("- frite failed")
     }
   }
 }
 
 void myspiffs_append_file(const char * path, const char * message, bool line)
 {
-  Serial.printf("Appending to file: %s\r\n", path);
+  LOG_PRINTF(("Appending to file: %s\r\n", path))
 
   File file = SPIFFS.open(path, FILE_APPEND);
   if(!file){
-    Serial.println("- failed to open file for appending");
+    LOG_PRINTLN("- failed to open file for appending")
     return;
   }
 
   if (line) {
     if(file.println(message)){
-      Serial.println("- file written");
+      LOG_PRINTLN("- file written")
     } else {
-      Serial.println("- frite failed");
+      LOG_PRINTLN("- frite failed")
     }
   } else {
     if(file.print(message)){
-      Serial.println("- file written");
+      LOG_PRINTLN("- file written")
     } else {
-      Serial.println("- frite failed");
+      LOG_PRINTLN("- frite failed")
     }
   }
 }
 
 void myspiffs_rename_file(const char * path1, const char * path2)
 {
-  Serial.printf("Renaming file %s to %s\r\n", path1, path2);
+  LOG_PRINTF(("Renaming file %s to %s\r\n", path1, path2))
   if (SPIFFS.rename(path1, path2)) {
-    Serial.println("- file renamed");
+    LOG_PRINTLN("- file renamed")
   } else {
-    Serial.println("- rename failed");
+    LOG_PRINTLN("- rename failed")
   }
 }
 
 void myspiffs_delete_file(const char * path)
 {
-  Serial.printf("Deleting file: %s\r\n", path);
+  LOG_PRINTF(("Deleting file: %s\r\n", path))
   if(SPIFFS.remove(path)){
-    Serial.println("- file deleted");
+    LOG_PRINTLN("- file deleted")
   } else {
-    Serial.println("- delete failed");
+    LOG_PRINTLN("- delete failed")
   }
 }

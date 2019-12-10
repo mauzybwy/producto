@@ -184,13 +184,13 @@ static void rtc_init()
 {
   /* UH OH */
   if (! producto.rtc.begin()) {
-    Serial.println("Couldn't find RTC");
+    ERR_PRINTLN("Couldn't find RTC")
     while (1);
   }
 
   /* Reset the time if RTC loses power */
   if (producto.rtc.lostPower()) {
-    Serial.println("RTC lost power, lets set the time!");
+    ERR_PRINTLN("RTC lost power, lets set the time!")
     producto.rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0)); // January 21, 2014 at 3am
   }
@@ -212,7 +212,7 @@ static void pause_resume_timer(Button2&)
     producto.active_task = producto.paused_task;
     producto.paused_task = PRODUCTO_TASK_NONE;
   } else {
-    Serial.println("PAUSE TIMER");
+    DEBUG_PRINTLN("PAUSE TIMER")
     producto.paused_task = producto.active_task;
     producto.active_task = PRODUCTO_TASK_NONE;
   }
@@ -375,14 +375,14 @@ static void handle_serial_commands()
     str = strip(str);
     
     if (str == "write") {
-      Serial.println("WRITE");
+      DEBUG_PRINTLN("WRITE")
       save_active_state();
     } else if (str == "read") {
-      Serial.println("READ");
+      DEBUG_PRINTLN("READ")
       print_active_file_contents();
       print_task_file_contents();
     } else if (str == "delete") {
-      Serial.println("DELETE");
+      DEBUG_PRINTLN("DELETE");
       delete_task_file();
     }
   }
