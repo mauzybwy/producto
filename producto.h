@@ -50,6 +50,7 @@ typedef struct producto_s {
   byte paused_task;
   TFT_eSPI tft;
   RTC_DS3231 rtc;
+  DateTime start_time;
 } Producto;
 
 #endif // _PRODUCTO_H_

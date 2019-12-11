@@ -5,6 +5,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "logging.h"
 #include "myspiffs.h"
 #include "display.h"
 #include "producto.h"
@@ -92,7 +93,9 @@ static bool save_active_state_flag = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define VERY_BIG 128
+#define BIG 128
+#define VERY_BIG 256
+static char big_arr[BIG] = ""; /* Big-ish array */
 static char very_big_arr[VERY_BIG] = ""; /* Array bigger than largest possible string */
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -144,10 +147,27 @@ void producto_init()
 
   serial_init();
   myspiffs_init();
+
+  String path = "/task/", fname;
+  String line;
+  for (int i = 0; i < producto.num_tasks; i++) {
+    fname = path + producto.tasks[i].id;
+    fname.toCharArray(big_arr, BIG);
+    
+    if (!myspiffs_file_exists(big_arr)) {
+      producto.tasks[i].str.toCharArray(very_big_arr, VERY_BIG);
+      myspiffs_write_file(big_arr, very_big_arr, true);
+    }
+    
+    line = myspiffs_read_first_line_of_file(big_arr);
+    producto.tasks[i].str = String(line);
+  }
+
   display_init(&producto);
   task_init();
   button_init();
   rtc_init();
+  producto.start_time = producto.rtc.now();
 
   interrupts();
 
@@ -175,6 +195,8 @@ static void serial_init()
 {
   Serial.begin(115200);
   Serial.println("Start");
+  ERR_PRINTLN("ERR ENABLE")
+  DEBUG_PRINTLN("DEBUG ENABLE")
   Serial.flush();
 }
 
@@ -313,6 +335,11 @@ static void save_active_state()
 {
   String producto_str = "{ ";
 
+  producto_str += "\"start_time\" : ";
+  producto_str += producto.start_time.unixtime();
+  producto_str += ", ";
+  
+
   for (int i = 0; i < producto.num_tasks; i++) {
     producto_str += "\"";
     producto_str += producto.tasks[i].str;
@@ -322,7 +349,7 @@ static void save_active_state()
     producto_str += ", ";
   }
   
-  producto_str += "}";
+  producto_str += "}\r\n";
 
   producto_str.toCharArray(very_big_arr, VERY_BIG);
   myspiffs_write_file(PRODUCTO_ACTIVE_FILE, very_big_arr, true);
@@ -332,7 +359,6 @@ static void append_active_to_tasks_file()
 {
   String active_str = myspiffs_read_first_line_of_file(PRODUCTO_ACTIVE_FILE);
   active_str += "\r\n";
-  
   active_str.toCharArray(very_big_arr, VERY_BIG);
   myspiffs_append_file(PRODUCTO_TASK_FILE, very_big_arr);
 }
@@ -369,7 +395,9 @@ static String strip(String str)
 
 static void handle_serial_commands()
 {
-  String str;
+  String str, int_str, task_str = "";
+  int task_num;
+
   if (Serial.available() > 0) {
     str = Serial.readString();
     str = strip(str);
@@ -384,6 +412,34 @@ static void handle_serial_commands()
     } else if (str == "delete") {
       DEBUG_PRINTLN("DELETE");
       delete_task_file();
+    } else if (str == "append") {
+      DEBUG_PRINTLN("APPEND");
+      append_active_to_tasks_file();
+    } else if (str.startsWith("task")) {
+      // Parse out task number and string
+      str = str.substring(5);                         // ignore "task "
+      int_str = str.substring(0, str.indexOf(' '));   // read the task number
+      task_num = str.toInt();                         // convert to a string
+      
+      if (str.indexOf(' ') > 0) {
+	task_str = str.substring(str.indexOf(' ') + 1); // read the task string
+      }
+
+      // Print em out
+      DEBUG_PRINTF("Requesting rename of task #%d to %s\r\n", task_num, task_str);
+
+      // Valid task numbers are 1 -> PRODUCTO_TASKS
+      if (task_num > 0 && task_num <= producto.num_tasks && task_str.length() > 0) {
+	DEBUG_PRINTF("Renaming task #%d to %s\r\n", task_num, task_str);
+
+	String path = "/task/", fname;
+	fname = path + producto.tasks[task_num-1].id;
+	fname.toCharArray(big_arr, BIG);
+	task_str.toCharArray(very_big_arr, VERY_BIG);
+	
+	myspiffs_write_file(big_arr, very_big_arr, true);
+	producto.tasks[task_num-1].str = String(task_str);
+      }
     }
   }
 }

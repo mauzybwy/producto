@@ -4,6 +4,8 @@
 #include "Arduino.h"
 
 void myspiffs_init();
+bool myspiffs_file_exists(const char * path);
+bool myspiffs_directory_exists(const char * path);
 void myspiffs_list_dir(const char * dirname, uint8_t levels);
 void myspiffs_print_file_to_serial(const char * path);
 String myspiffs_read_first_line_of_file(const char * path);
