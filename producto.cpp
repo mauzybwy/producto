@@ -90,6 +90,8 @@ static Producto producto = {
 ////////////////////////////////////////////////////////////////////////////////
 
 static bool save_active_state_flag = false;
+static int task_pressed = PRODUCTO_TASKS;
+static int button_pressed = PRODUCTO_BTNS;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -106,10 +108,10 @@ static void task_init();
 static void button_init();
 static void task_btn(int task_num);
 static void toggle_list_tasks(Button2&);
-static void task_isr(int i);
-static void button_isr(int i);
+static void check_task_press();
+static void check_button_press();
 static void pause_resume_timer(Button2&);
-static void do_timer();
+static void IRAM_ATTR do_timer();
 static void save_active_state();
 static void print_active_file_contents();
 static void print_task_file_contents();
@@ -126,15 +128,15 @@ static void task_btn3(Button2&) { task_btn(3); }
 static void task_btn4(Button2&) { task_btn(4); }
 static void task_btn5(Button2&) { task_btn(5); }
 
-static void task_handle0() { task_isr(0); }
-static void task_handle1() { task_isr(1); }
-static void task_handle2() { task_isr(2); }
-static void task_handle3() { task_isr(3); }
-static void task_handle4() { task_isr(4); }
-static void task_handle5() { task_isr(5); }
+static void IRAM_ATTR task_handle0() { task_pressed = 0; }
+static void IRAM_ATTR task_handle1() { task_pressed = 1; }
+static void IRAM_ATTR task_handle2() { task_pressed = 2; }
+static void IRAM_ATTR task_handle3() { task_pressed = 3; }
+static void IRAM_ATTR task_handle4() { task_pressed = 4; }
+static void IRAM_ATTR task_handle5() { task_pressed = 5; }
 
-static void button_handle0() { button_isr(0); }
-static void button_handle1() { button_isr(1); }
+static void IRAM_ATTR button_handle0() { button_pressed = 0; }
+static void IRAM_ATTR button_handle1() { button_pressed = 1; }
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -185,6 +187,9 @@ void producto_loop()
     save_active_state_flag = false;
     save_active_state();
   }
+  
+  check_task_press();
+  check_button_press();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -244,7 +249,7 @@ static void pause_resume_timer(Button2&)
 /**
  * If the timer is active, do timer things
  */
-static void do_timer()
+static void IRAM_ATTR do_timer()
 {
   static int total_seconds = 0;
   
@@ -261,14 +266,18 @@ static void do_timer()
 ////////////////////////////////////////////////////////////////////////////////
 
 
-static void button_isr(int i)
+static void check_button_press()
 {
-  producto.buttons[i].btn.loop();
+  if (button_pressed < PRODUCTO_BTNS) {
+    producto.buttons[button_pressed].btn.loop();
+  }
 }
 
-static void task_isr(int i)
+static void check_task_press()
 {
-  producto.tasks[i].btn.loop();
+  if (task_pressed < PRODUCTO_TASKS) {
+    producto.tasks[task_pressed].btn.loop();
+  }
 }
 
 /**
