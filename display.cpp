@@ -14,9 +14,9 @@ static void producto_wr_timer(int time);
 static void producto_wr_task(String task_str);
 static void producto_list_tasks();
 static void display_start();
-static void display_task();
 static void display_list();
-static void display_timer();
+static void display_task_name();
+static void display_task_timer();
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -49,6 +49,14 @@ void display_transition(DisplayState state)
     producto->tft.fillRect(0, 20, producto->tft.width(), producto->tft.height(), TFT_BLACK);
     producto->tft.setTextDatum(MC_DATUM);
     producto->tft.setTextSize(2);
+
+    display_task_name();
+
+    producto->tft.setRotation(1);
+    producto->tft.setTextDatum(MC_DATUM);
+    producto->tft.setTextSize(5);
+
+    display_task_timer();
     break;
 
   case LIST:
@@ -57,12 +65,6 @@ void display_transition(DisplayState state)
     producto->tft.setRotation(2);
     producto->tft.setTextDatum(ML_DATUM);
     producto->tft.setTextSize(1);
-    break;
-
-  case TIMER:
-    producto->tft.setRotation(1);
-    producto->tft.setTextDatum(MC_DATUM);
-    producto->tft.setTextSize(5);
     break;
 
   default:
@@ -83,20 +85,24 @@ void display_draw()
     break;
 
   case TASK:
-    display_task();
+    display_task_timer();
     break;
 
   case LIST:
     display_list();
     break;
 
-  case TIMER:
-    display_timer();
-    break;
-
   default:
     break;
   }
+}
+
+/**
+ * Return current state
+ */
+DisplayState display_get_state()
+{
+  return display_state;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -176,7 +182,12 @@ static void display_start()
   producto_circle(0);
 }
 
-static void display_task()
+static void display_list()
+{
+  producto_list_tasks();
+}
+
+static void display_task_name()
 {
   ProductoTask *task;
   
@@ -185,25 +196,16 @@ static void display_task()
   } else if (producto->paused_task != PRODUCTO_TASK_NONE) {
     task = &producto->tasks[producto->paused_task];
   } else {
-    task = NULL;
+    // Should never get here
+    /* TODO: handle error */
   }
 
-  if (task != NULL) {
-    producto_wr_task(task->str);
-    producto_circle(task->id);
+  producto_wr_task(task->str);
+  producto_circle(task->id);
 
-    display_transition(TIMER);
-  } else {
-    producto_list_tasks();
-  }
 }
 
-static void display_list()
-{
-  producto_list_tasks();
-}
-
-static void display_timer()
+static void display_task_timer()
 {
   ProductoTask *task;
   task = producto->active_task != PRODUCTO_TASK_NONE ? &producto->tasks[producto->active_task] : &producto->tasks[producto->paused_task];

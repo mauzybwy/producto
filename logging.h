@@ -9,9 +9,9 @@
 #define LOG_LEVEL LOGGING_ERR
 
 #if LOG_LEVEL >= LOGGING_ERR
-#define ERR_PRINT(x) Serial.print(x);
-#define ERR_PRINTLN(x) Serial.println(x);
-#define ERR_PRINTF(...) Serial.printf(__VA_ARGS__);
+#define ERR_PRINT(x) Serial.print(x)
+#define ERR_PRINTLN(x) Serial.println(x)
+#define ERR_PRINTF(...) Serial.printf(__VA_ARGS__)
 #else
 #define ERR_PRINT(x)
 #define ERR_PRINTLN(x)
@@ -19,9 +19,9 @@
 #endif
 
 #if LOG_LEVEL >= LOGGING_DBG
-#define DEBUG_PRINT(x) Serial.print(x);
-#define DEBUG_PRINTLN(x) Serial.println(x);
-#define DEBUG_PRINTF(...) Serial.printf(__VA_ARGS__);
+#define DEBUG_PRINT(x) Serial.print(x)
+#define DEBUG_PRINTLN(x) Serial.println(x)
+#define DEBUG_PRINTF(...) Serial.printf(__VA_ARGS__)
 #else
 #define DEBUG_PRINT(x)
 #define DEBUG_PRINTLN(x)

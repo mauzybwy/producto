@@ -143,13 +143,14 @@ static void button_handle1() { button_isr(1); }
  */
 void producto_init()
 {
+  String path,fname, line;
+
   noInterrupts();
 
   serial_init();
   myspiffs_init();
 
-  String path = "/task/", fname;
-  String line;
+  path = "/task/";
   for (int i = 0; i < producto.num_tasks; i++) {
     fname = path + producto.tasks[i].id;
     fname.toCharArray(big_arr, BIG);
@@ -195,8 +196,8 @@ static void serial_init()
 {
   Serial.begin(115200);
   Serial.println("Start");
-  ERR_PRINTLN("ERR ENABLE")
-  DEBUG_PRINTLN("DEBUG ENABLE")
+  ERR_PRINTLN("ERR ENABLE");
+  DEBUG_PRINTLN("DEBUG ENABLE");
   Serial.flush();
 }
 
@@ -206,13 +207,13 @@ static void rtc_init()
 {
   /* UH OH */
   if (! producto.rtc.begin()) {
-    ERR_PRINTLN("Couldn't find RTC")
+    ERR_PRINTLN("Couldn't find RTC");
     while (1);
   }
 
   /* Reset the time if RTC loses power */
   if (producto.rtc.lostPower()) {
-    ERR_PRINTLN("RTC lost power, lets set the time!")
+    ERR_PRINTLN("RTC lost power, lets set the time!");
     producto.rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0)); // January 21, 2014 at 3am
   }
@@ -234,7 +235,7 @@ static void pause_resume_timer(Button2&)
     producto.active_task = producto.paused_task;
     producto.paused_task = PRODUCTO_TASK_NONE;
   } else {
-    DEBUG_PRINTLN("PAUSE TIMER")
+    DEBUG_PRINTLN("PAUSE TIMER");
     producto.paused_task = producto.active_task;
     producto.active_task = PRODUCTO_TASK_NONE;
   }
@@ -308,24 +309,29 @@ static void button_init()
 
 static void task_btn(int task_num)
 {
-  ProductoButton task = producto.tasks[task_num];
-
-  producto.active_task = task_num;
-  producto.paused_task = PRODUCTO_TASK_NONE;
-
-  display_transition(TASK);
+  /* TODO: really this should be cooked into the Display FSM to transition stately */
+  DisplayState display_state = display_get_state();
+  
+  if ( task_num != producto.active_task
+       || display_state != TASK /* TODO: display state hack */
+       || producto.active_task == PRODUCTO_TASK_NONE ) {
+    producto.active_task = task_num;
+    producto.paused_task = PRODUCTO_TASK_NONE;
+    display_transition(TASK);
+  }
 }
 
 static void toggle_list_tasks(Button2&)
 {
-  static bool showing_list = false;
+  /* TODO: really this should be cooked into the Display FSM to transition stately */
+  DisplayState display_state = display_get_state();
 
-  if (showing_list == false) {
-    display_transition(LIST);
-    showing_list = true;
-  } else {
+  if (display_state == LIST && (producto.active_task != PRODUCTO_TASK_NONE || producto.paused_task != PRODUCTO_TASK_NONE)) {
     display_transition(TASK);
-    showing_list = false;
+  } else if (display_state == TASK) {
+    display_transition(LIST);
+  } else {
+    // Do nothing
   }
 }
 
@@ -403,10 +409,10 @@ static void handle_serial_commands()
     str = strip(str);
     
     if (str == "write") {
-      DEBUG_PRINTLN("WRITE")
+      DEBUG_PRINTLN("WRITE");
       save_active_state();
     } else if (str == "read") {
-      DEBUG_PRINTLN("READ")
+      DEBUG_PRINTLN("READ");
       print_active_file_contents();
       print_task_file_contents();
     } else if (str == "delete") {

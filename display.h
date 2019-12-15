@@ -13,5 +13,6 @@ typedef enum display_state_e {
 void display_init(Producto *p);
 void display_draw();
 void display_transition(DisplayState state);
+DisplayState display_get_state();
 
 #endif // _DISPLAY_H_
