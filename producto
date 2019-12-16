@@ -1,0 +1,82 @@
+#!/usr/bin/python3
+
+################################################################################
+# Imports
+
+import ast
+import time
+import serial
+import argparse
+
+################################################################################
+# Default constants
+
+PORT="/dev/ttyUSB0"
+BAUD=115200
+TIMEOUT=1
+
+################################################################################
+# Producto Class
+
+class Producto(object):
+    def __init__(self, port=PORT, baud=BAUD, timeout=TIMEOUT):
+        # Initialize parameter instance variables
+        self.port = port
+        self.baud = baud
+        self.timeout = timeout
+
+        # Initialize instance variables
+        self.task_history_list = [] # task list as read from the device
+    
+    def read_task_history(self):
+        """Task history is stored as a list of dicts in memory on the device"""
+
+        # Communication with the device is with serial
+        with serial.Serial(port=self.port, baudrate=self.baud, timeout=self.timeout) as ser:
+            # Ask the device to read the task history list
+            ser.write(b"read")
+            time.sleep(1)
+
+            # Read the response
+            line = ser.readline()
+            while line:
+                # Format the line read
+                line = line.decode("utf-8")
+                line = line.strip()
+
+                # If the line is correctly formatted, save it
+                if line:
+                    try:
+                        d = ast.literal_eval(line) # each line is formatted as a dict
+                        self.task_history_list.append(d)
+                    except SyntaxError:
+                        pass # TODO: properly handle error cases
+
+                # Read the next line (will timeout if no more history to read)
+                line = ser.readline()
+
+    def rename_task(self, task_num, task_name):
+        """Rename the specified task"""
+        with serial.Serial(port=self.port, baudrate=self.baud, timeout=self.timeout) as ser:
+            # Ask the device to update the task name
+            request_str = "task {0} {1}".format(task_num, task_name)
+            ser.write(request_str.encode("utf-8"))
+            time.sleep(1)
+
+    def delete_history(self):
+        with serial.Serial(port=self.port, baudrate=self.baud, timeout=self.timeout) as ser:
+            # Ask the device to delete the entire task history
+            ser.write(b"delete")
+            time.sleep(1)
+
+################################################################################
+# Main
+
+if __name__=="__main__":
+    producto = Producto()
+
+    producto.delete_history()
+    producto.read_task_history()
+    
+    for task in producto.task_history_list:
+        print(task)
