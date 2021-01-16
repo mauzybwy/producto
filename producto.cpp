@@ -5,14 +5,23 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "producto.h"
 #include "logging.h"
 #include "myspiffs.h"
 #include "display.h"
-#include "producto.h"
+#include "commands.h"
+#include "shared_mem.h"
+#include "server.h"
+
 #include "Arduino.h"
 #include <Button2.h>
 #include <TFT_eSPI.h>
 #include <RTClib.h>
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WiFiMulti.h> 
+// #include <mdns.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -95,17 +104,11 @@ static int button_pressed = PRODUCTO_BTNS;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define BIG 128
-#define VERY_BIG 256
-static char big_arr[BIG] = ""; /* Big-ish array */
-static char very_big_arr[VERY_BIG] = ""; /* Array bigger than largest possible string */
-
-////////////////////////////////////////////////////////////////////////////////
-
 static void serial_init();
 static void rtc_init();
 static void task_init();
 static void button_init();
+static void wifi_init();
 static void task_btn(int task_num);
 static void toggle_list_tasks(Button2&);
 static void check_task_press();
@@ -113,9 +116,6 @@ static void check_button_press();
 static void pause_resume_timer(Button2&);
 static void IRAM_ATTR do_timer();
 static void save_active_state();
-static void print_active_file_contents();
-static void print_task_file_contents();
-static void delete_task_file();
 static void handle_serial_commands();
 static void append_active_to_tasks_file();
 
@@ -140,6 +140,26 @@ static void IRAM_ATTR button_handle1() { button_pressed = 1; }
 
 ////////////////////////////////////////////////////////////////////////////////
 
+WiFiMulti wifiMulti;
+
+/* Wifi Config */
+#define NUM_WIFI (1)
+const char* ssid[NUM_WIFI] = {
+    "TheSaltySpitoon_2GEXT"
+    /* "TheSaltySpitoon", */
+};
+
+const char* password[NUM_WIFI] = {    
+    "AbandonAllHopeYeWhoEnterHere",
+    /* "AbandonAllHopeYeWhoEnterHere" */
+};
+
+IPAddress ip(192, 168, 1, 77);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 255, 0);
+
+////////////////////////////////////////////////////////////////////////////////
+
 /**
  * Initialize the Producto
  */
@@ -147,9 +167,12 @@ void producto_init()
 {
   String path,fname, line;
 
+  serial_init();
+  wifi_init();
+  server_init(&producto);
+
   noInterrupts();
 
-  serial_init();
   myspiffs_init();
 
   path = "/task/";
@@ -169,10 +192,12 @@ void producto_init()
   display_init(&producto);
   task_init();
   button_init();
-  rtc_init();
+  //rtc_init();
   producto.start_time = producto.rtc.now();
 
   interrupts();
+
+  server_start();
 
   append_active_to_tasks_file();
 }
@@ -187,6 +212,8 @@ void producto_loop()
     save_active_state_flag = false;
     save_active_state();
   }
+
+  server_check_requests();
   
   check_task_press();
   check_button_press();
@@ -316,6 +343,39 @@ static void button_init()
   attachInterrupt(buttons[1].pin, button_handle1, CHANGE);
 }
 
+static void wifi_init()
+{
+  for (int i = 0; i < NUM_WIFI; i++)
+    {
+      wifiMulti.addAP(ssid[i], password[i]);
+    }
+  
+  Serial.println("Connecting Wifi...");
+  for (int i = 0; wifiMulti.run() != WL_CONNECTED && i < 40; i++)
+    {
+      delay(250);
+      Serial.print('.');
+    }
+
+  if (wifiMulti.run() == WL_CONNECTED) {
+    Serial.println('\n');
+    Serial.print("Connected to ");
+    Serial.println(WiFi.SSID());
+    Serial.print("IP address:\t");
+    Serial.println(WiFi.localIP());
+
+    // if (MDNS.begin("esp32")) {
+    //   Serial.println("mDNS responder started");
+    // } else {
+    //   Serial.println("Error setting up MDNS responder!");
+    // }
+  } else {
+    Serial.println("Timeout connecting to Wifi, will operate on defaults.");
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 static void task_btn(int task_num)
 {
   /* TODO: really this should be cooked into the Display FSM to transition stately */
@@ -378,21 +438,6 @@ static void append_active_to_tasks_file()
   myspiffs_append_file(PRODUCTO_TASK_FILE, very_big_arr);
 }
 
-static void print_active_file_contents()
-{
-  myspiffs_print_file_to_serial(PRODUCTO_ACTIVE_FILE);
-}
-
-static void print_task_file_contents()
-{
-  myspiffs_print_file_to_serial(PRODUCTO_TASK_FILE);
-}
-
-static void delete_task_file()
-{
-  myspiffs_delete_file(PRODUCTO_TASK_FILE);
-}
-
 static String strip(String str)
 {
   String out_str = str;
@@ -417,20 +462,17 @@ static void handle_serial_commands()
     str = Serial.readString();
     str = strip(str);
     
-    if (str == "write") {
-      DEBUG_PRINTLN("WRITE");
-      save_active_state();
-    } else if (str == "read") {
+    if (str == "read") {
       DEBUG_PRINTLN("READ");
-      print_active_file_contents();
-      print_task_file_contents();
-    } else if (str == "delete") {
+      print_task_history();
+    }
+
+    else if (str == "delete") {
       DEBUG_PRINTLN("DELETE");
-      delete_task_file();
-    } else if (str == "append") {
-      DEBUG_PRINTLN("APPEND");
-      append_active_to_tasks_file();
-    } else if (str.startsWith("task")) {
+      delete_task_history();
+    }
+
+    else if (str.startsWith("task")) {
       // Parse out task number and string
       str = str.substring(5);                         // ignore "task "
       int_str = str.substring(0, str.indexOf(' '));   // read the task number
@@ -439,22 +481,10 @@ static void handle_serial_commands()
       if (str.indexOf(' ') > 0) {
 	task_str = str.substring(str.indexOf(' ') + 1); // read the task string
       }
-
+      
       // Print em out
       DEBUG_PRINTF("Requesting rename of task #%d to %s\r\n", task_num, task_str);
-
-      // Valid task numbers are 1 -> PRODUCTO_TASKS
-      if (task_num > 0 && task_num <= producto.num_tasks && task_str.length() > 0) {
-	DEBUG_PRINTF("Renaming task #%d to %s\r\n", task_num, task_str);
-
-	String path = "/task/", fname;
-	fname = path + producto.tasks[task_num-1].id;
-	fname.toCharArray(big_arr, BIG);
-	task_str.toCharArray(very_big_arr, VERY_BIG);
-	
-	myspiffs_write_file(big_arr, very_big_arr, true);
-	producto.tasks[task_num-1].str = String(task_str);
-      }
+      rename_task(producto, task_num, task_str);
     }
   }
 }

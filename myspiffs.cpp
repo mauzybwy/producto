@@ -5,7 +5,7 @@
 
 void myspiffs_init()
 {
-  if(!SPIFFS.begin()) {
+  if(!SPIFFS.begin(true)) {
     ERR_PRINTLN("SPIFFS Mount Failed");
   }
 }
@@ -83,7 +83,6 @@ String myspiffs_read_first_line_of_file(const char * path)
   DEBUG_PRINTF("Reading first line of file: %s\r\n", path);
 
   File file = SPIFFS.open(path);
-  DEBUG_PRINTLN("FOOOO");
   if(!file || file.isDirectory()){
     ERR_PRINTLN("- failed to open file for reading");
     return "";
@@ -91,7 +90,6 @@ String myspiffs_read_first_line_of_file(const char * path)
 
   String first_line = "";
   char c;
-  DEBUG_PRINTLN("BARRRR");
   while(file.available()) {
     c = (char)file.read();
     if (c == '\r' || c == '\n') {
@@ -108,6 +106,32 @@ String myspiffs_read_first_line_of_file(const char * path)
   DEBUG_PRINTLN("- first line:");
   DEBUG_PRINTLN(first_line);
   return first_line;
+}
+
+String myspiffs_read_file(const char * path)
+{
+  DEBUG_PRINTF("Reading first line of file: %s\r\n", path);
+
+  File file = SPIFFS.open(path);
+  if(!file || file.isDirectory()){
+    ERR_PRINTLN("- failed to open file for reading");
+    return "";
+  }
+
+  String file_str = "";
+  char c;
+  while(file.available()) {
+    c = (char)file.read();
+    
+    if ((byte)c == 0xFF) {
+      ERR_PRINTF("BAD SPIFFS MEMORY: %s\r\n", path);
+      break;
+    }
+    
+    file_str += c;
+  }
+  
+  return file_str;
 }
 
 void myspiffs_write_file(const char * path, const char * message, bool line)
